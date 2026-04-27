@@ -8,8 +8,8 @@ from rag_coach import load_collection, get_coach_hint
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
-st.title("🎮 Game Glitch Investigator")
-st.caption("An AI-generated guessing game. Something is off.")
+st.title("🎮 Number Guessing Game")
+st.caption("An AI-generated guessing game.")
 
 # Cache the ChromaDB collection for the lifetime of the Streamlit process.
 # load_collection() embeds the knowledge base docs once — no server needed.
@@ -147,7 +147,7 @@ if submit:
                 )
 
 st.divider()
-st.caption("Built by an AI that claims this code is production-ready.")
+st.caption("Originally built by an AI, then debugged and tested to be production-ready.")
 
 # --- RAG Game Coach ---
 st.sidebar.divider()
