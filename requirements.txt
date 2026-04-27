@@ -1,3 +1,7 @@
 streamlit>=1.21.0
 altair<5
 pytest
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+google-generativeai>=0.8.0
+python-dotenv>=1.0.0

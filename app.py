@@ -3,12 +3,20 @@ import streamlit as st
 
 #FIX: Refactored logic into logic_utils.py using Copilot Agent mode
 from logic_utils import get_range_for_difficulty, parse_guess, check_guess, update_score
+from rag_coach import load_collection, get_coach_hint
 
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
 st.title("🎮 Game Glitch Investigator")
 st.caption("An AI-generated guessing game. Something is off.")
+
+# Cache the ChromaDB collection for the lifetime of the Streamlit process.
+# load_collection() embeds the knowledge base docs once — no server needed.
+@st.cache_resource(show_spinner="Loading Game Coach knowledge base...")
+def get_collection():
+    return load_collection()
+
 
 st.sidebar.header("Settings")
 
@@ -45,6 +53,12 @@ if "status" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
+if "last_outcome" not in st.session_state:
+    st.session_state.last_outcome = ""
+
+if "coach_hint" not in st.session_state:
+    st.session_state.coach_hint = None
+
 st.subheader("Make a guess")
 
 st.info(
@@ -78,6 +92,8 @@ if new_game:
     st.session_state.score = 0
     st.session_state.status = "playing"
     st.session_state.history = []
+    st.session_state.last_outcome = ""
+    st.session_state.coach_hint = None
     st.success("New game started.")
     st.rerun()
 
@@ -97,12 +113,13 @@ if submit:
         st.error(err)
     else:
         st.session_state.attempts += 1
-        
+
         st.session_state.history.append(guess_int)
 
         secret = st.session_state.secret
 
         outcome, message = check_guess(guess_int, secret)
+        st.session_state.last_outcome = outcome
 
         if show_hint:
             st.warning(message)
@@ -131,3 +148,25 @@ if submit:
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
+
+# --- RAG Game Coach ---
+st.sidebar.divider()
+st.sidebar.subheader("Game Coach 🤖")
+st.sidebar.caption("Uses RAG to retrieve strategy tips and generate a personalised hint. Requires GEMINI_API_KEY env var.")
+
+if st.sidebar.button("Ask the Coach"):
+    with st.sidebar:
+        with st.spinner("Thinking..."):
+            game_state = {
+                "difficulty": difficulty,
+                "low": low,
+                "high": high,
+                "history": [g for g in st.session_state.history if isinstance(g, int)],
+                "last_outcome": st.session_state.last_outcome,
+                "attempts_remaining": attempt_limit - st.session_state.attempts,
+            }
+            collection = get_collection()
+            st.session_state.coach_hint = get_coach_hint(game_state, collection)
+
+if st.session_state.coach_hint:
+    st.sidebar.info(st.session_state.coach_hint)
